@@ -6,7 +6,7 @@
         <item name="android:statusBarColor">@color/background_color</item>
     </style>
 
-    <!-- Professional Style for the Main Menu Buttons -->
+    <!-- This is the old style for solid buttons, we keep it for other potential screens -->
     <style name="MainMenuButton" parent="Widget.AppCompat.Button">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
@@ -24,4 +24,22 @@
         <item name="android:textAllCaps">false</item>
         <item name="drawableTint">@color/white</item>
     </style>
+
+    <!-- !!! THIS IS THE NEW STYLE FOR OUR AESTHETIC BUTTONS !!! -->
+    <style name="TranslucentButton" parent="Widget.AppCompat.Button">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/translucent_button_background</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:paddingTop">20dp</item>
+        <item name="android:paddingBottom">20dp</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:drawablePadding">16dp</item>
+        <item name="android:textAlignment">viewStart</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="drawableTint">@color/text_primary</item>
+    </style>
+
 </resources>

@@ -1,4 +1,5 @@
 <resources>
+    <string name="app_title">RETINA</string>
     <string name="app_name">Retina AI Assistant</string>
     <string name="btn_find_object_text">Find Object</string>
     <string name="desc_find_object">Button to open the smart object locator</string>

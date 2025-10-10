@@ -1,100 +1,130 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<!--
+  Main layout file for the Retina app’s MainActivity.
+  This layout defines the user interface displayed when the app launches.
+  It contains:
+    - A live camera preview (for real-time vision-based detection)
+    - App logo and title
+    - Four feature buttons for navigation to key functionalities
+-->
+
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!--
+        PreviewView: Displays the live camera feed using CameraX API.
+        This acts as the background view where object detection,
+        OCR, or other computer vision tasks take place in real time.
+    -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/viewFinder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!--
+        App Logo: Centered near the top.
+        This adds brand identity and visual appeal.
+        The tint color gives the logo a blue accent matching the app’s theme.
+    -->
     <ImageView
         android:id="@+id/logo"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        android:contentDescription="@string/app_logo_description"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
+        android:layout_marginTop="64dp"
         android:src="@drawable/ic_logo_retina"
-        app:layout_constraintVertical_bias="0.25"
-        app:layout_constraintBottom_toTopOf="@+id/button_guideline"
+        android:contentDescription="@string/app_logo_description"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:tint="@color/accent_blue" />
 
+    <!--
+        App Title: Displayed below the logo.
+        Helps identify the app ("Retina") clearly on the main screen.
+    -->
     <TextView
         android:id="@+id/textViewTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/app_name"
-        android:textColor="@color/text_primary"
-        android:textSize="26sp"
+        android:layout_marginTop="8dp"
+        android:text="@string/app_title"
+        android:textColor="@color/white"
+        android:textSize="28sp"
         android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/logo"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/logo" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <TextView
-        android:id="@+id/textViewSubtitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/app_subtitle"
-        android:textColor="@color/text_secondary"
-        android:textSize="16sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/textViewTitle" />
-
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/button_guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.52"/>
-
+    <!--
+        BUTTON 1: "Find Object"
+        Used to open the Smart Object Locator feature.
+        This lets visually impaired users locate objects using voice feedback.
+    -->
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnFindObject"
-        style="@style/MainMenuButton"
+        style="@style/TranslucentButton"
         android:layout_marginHorizontal="24dp"
-        android:contentDescription="@string/desc_find_object"
+        android:layout_marginBottom="16dp"
         android:text="@string/btn_find_object_text"
         app:drawableStartCompat="@drawable/ic_find_object"
-        app:layout_constraintTop_toTopOf="@+id/button_guideline"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintBottom_toTopOf="@+id/btnReadCurrency"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
+    <!--
+        BUTTON 2: "Read Currency"
+        Activates the currency recognition module.
+        Helps users identify banknotes through camera detection and audio output.
+    -->
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnReadCurrency"
-        style="@style/MainMenuButton"
-        android:layout_marginTop="16dp"
+        style="@style/TranslucentButton"
         android:layout_marginHorizontal="24dp"
-        android:contentDescription="@string/desc_read_currency"
+        android:layout_marginBottom="16dp"
         android:text="@string/btn_read_currency_text"
         app:drawableStartCompat="@drawable/ic_read_currency"
-        app:layout_constraintTop_toBottomOf="@+id/btnFindObject"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintBottom_toTopOf="@+id/btnReadText"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
+    <!--
+        BUTTON 3: "Read Text"
+        Triggers the OCR + TTS module.
+        The app captures printed or handwritten text and reads it aloud.
+    -->
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnReadText"
-        style="@style/MainMenuButton"
-        android:layout_marginTop="16dp"
+        style="@style/TranslucentButton"
         android:layout_marginHorizontal="24dp"
-        android:contentDescription="@string/desc_read_text"
+        android:layout_marginBottom="16dp"
         android:text="@string/btn_read_text_text"
         app:drawableStartCompat="@drawable/ic_read_text"
-        app:layout_constraintTop_toBottomOf="@+id/btnReadCurrency"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintBottom_toTopOf="@+id/btnObstacleAlert"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
+    <!--
+        BUTTON 4: "Obstacle Alert"
+        Starts the obstacle detection/alert feature.
+        Helps users detect nearby obstacles for safe navigation.
+        Positioned at the bottom for easy access.
+    -->
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/btnObstacleAlert"
-        style="@style/MainMenuButton"
-        android:layout_marginTop="16dp"
+        style="@style/TranslucentButton"
         android:layout_marginHorizontal="24dp"
-        android:contentDescription="@string/desc_obstacle_alert"
+        android:layout_marginBottom="32dp"
         android:text="@string/btn_obstacle_alert_text"
         app:drawableStartCompat="@drawable/ic_obstacle_alert"
-        app:layout_constraintTop_toBottomOf="@+id/btnReadText"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

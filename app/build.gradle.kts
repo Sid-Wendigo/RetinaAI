@@ -29,13 +29,13 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    // This is the critical line that makes 'binding' work.
     buildFeatures {
         viewBinding = true
     }
 }
 
 dependencies {
+    // Stable, compatible versions of all libraries
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
@@ -49,9 +49,6 @@ dependencies {
 
     // ML Kit for Text Recognition
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
-
-    // TensorFlow Lite (for later)
-    implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
