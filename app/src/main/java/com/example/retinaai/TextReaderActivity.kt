@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
@@ -27,10 +29,15 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var binding: ActivityTextReaderBinding
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var tts: TextToSpeech
+    private lateinit var gestureDetector: GestureDetector
 
     // --- Used to avoid repeating the same text aloud ---
     private var lastSpokenText: String = ""
     private var lastAnalysisTimestamp: Long = 0
+
+    // 🔒 OCR session guard (prevents stale results)
+    @Volatile
+    private var ocrSessionId = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,11 +47,34 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         // Initialize Text-to-Speech
         tts = TextToSpeech(this, this)
 
+        // --- Double tap: stop + invalidate old OCR ---
+        gestureDetector = GestureDetector(
+            this,
+            object : GestureDetector.SimpleOnGestureListener() {
+                override fun onDoubleTap(e: MotionEvent): Boolean {
+                    tts.stop()
+                    lastSpokenText = ""
+                    lastAnalysisTimestamp = 0
+                    ocrSessionId++   // ❗ invalidate all old frames
+                    return true
+                }
+            }
+        )
+
+        binding.viewFinder.setOnTouchListener { _, event ->
+            gestureDetector.onTouchEvent(event)
+            true
+        }
+
         // Check and request permissions
         if (allPermissionsGranted()) {
             startCamera()
         } else {
-            ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+            ActivityCompat.requestPermissions(
+                this,
+                REQUIRED_PERMISSIONS,
+                REQUEST_CODE_PERMISSIONS
+            )
         }
 
         // Executor for background image analysis
@@ -60,12 +90,10 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         cameraProviderFuture.addListener({
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
-            // --- Camera Preview Setup ---
             val preview = Preview.Builder().build().apply {
                 setSurfaceProvider(binding.viewFinder.surfaceProvider)
             }
 
-            // --- Image Analyzer for Text Recognition ---
             val imageAnalyzer = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
@@ -75,11 +103,15 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalyzer)
+                cameraProvider.bindToLifecycle(
+                    this,
+                    cameraSelector,
+                    preview,
+                    imageAnalyzer
+                )
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
-
         }, ContextCompat.getMainExecutor(this))
     }
 
@@ -89,13 +121,13 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
      */
     private inner class TextRecognitionAnalyzer : ImageAnalysis.Analyzer {
 
-        private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        private val recognizer =
+            TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
         @androidx.camera.core.ExperimentalGetImage
         override fun analyze(imageProxy: ImageProxy) {
             val mediaImage = imageProxy.image ?: return imageProxy.close()
 
-            // Limit OCR frequency to once per second for efficiency
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastAnalysisTimestamp < 1000) {
                 imageProxy.close()
@@ -103,22 +135,40 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
             lastAnalysisTimestamp = currentTime
 
-            val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+            val image = InputImage.fromMediaImage(
+                mediaImage,
+                imageProxy.imageInfo.rotationDegrees
+            )
+
+            // Capture session at frame time
+            val sessionAtCapture = ocrSessionId
 
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
-                    // Sort text blocks top-to-bottom for natural reading
-                    val sortedBlocks = visionText.textBlocks.sortedBy { it.boundingBox?.top }
-                    val extractedText = sortedBlocks.joinToString(" ") { it.text }
+
+                    // ❌ Ignore stale OCR results
+                    if (sessionAtCapture != ocrSessionId) return@addOnSuccessListener
+
+                    // 🔁 ORIGINAL LOGIC — UNCHANGED
+                    val sortedBlocks =
+                        visionText.textBlocks.sortedBy { it.boundingBox?.top }
+
+                    val extractedText = sortedBlocks
+                        .joinToString(" ") { it.text }
                         .replace("\n", " ")
                         .trim()
 
-                    // Speak detected text if it’s new and TTS is not speaking
-                    if (extractedText.isNotBlank() &&
+                    if (
+                        extractedText.isNotBlank() &&
                         extractedText != lastSpokenText &&
                         !tts.isSpeaking
                     ) {
-                        tts.speak(extractedText, TextToSpeech.QUEUE_FLUSH, null, null)
+                        tts.speak(
+                            extractedText,
+                            TextToSpeech.QUEUE_FLUSH,
+                            null,
+                            null
+                        )
                         lastSpokenText = extractedText
                     }
                 }
@@ -137,7 +187,10 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             val result = tts.setLanguage(Locale.US)
-            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+            if (
+                result == TextToSpeech.LANG_MISSING_DATA ||
+                result == TextToSpeech.LANG_NOT_SUPPORTED
+            ) {
                 Log.e(TAG, "TTS: Language not supported.")
             }
         } else {
@@ -145,36 +198,39 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    /**
-     * Checks if all required permissions are granted.
-     */
-    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
-        ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
-    }
+    private fun allPermissionsGranted() =
+        REQUIRED_PERMISSIONS.all {
+            ContextCompat.checkSelfPermission(
+                baseContext,
+                it
+            ) == PackageManager.PERMISSION_GRANTED
+        }
 
-    /**
-     * Handles runtime permission results.
-     */
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
         grantResults: IntArray
     ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        super.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
+        )
 
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
                 startCamera()
             } else {
-                Toast.makeText(this, "Camera permission is required.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this,
+                    "Camera permission is required.",
+                    Toast.LENGTH_SHORT
+                ).show()
                 finish()
             }
         }
     }
 
-    /**
-     * Release TTS and camera resources on exit.
-     */
     override fun onDestroy() {
         super.onDestroy()
         tts.stop()
@@ -185,6 +241,7 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     companion object {
         private const val TAG = "RetinaAI"
         private const val REQUEST_CODE_PERMISSIONS = 10
-        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+        private val REQUIRED_PERMISSIONS =
+            arrayOf(Manifest.permission.CAMERA)
     }
 }

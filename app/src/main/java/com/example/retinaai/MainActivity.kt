@@ -140,13 +140,14 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     /** Assigns click listeners to all buttons with TTS feedback */
     private fun setupButtonClickListeners() {
         binding.btnFindObject.setOnClickListener {
-            tts.speak("Find Object selected.", TextToSpeech.QUEUE_FLUSH, null, null)
-            showToast("Find Object feature coming soon!")
+            tts.speak("Opening object detector", TextToSpeech.QUEUE_FLUSH, null, null)
+            startActivity(Intent(this, ObjectDetectorActivity::class.java))
         }
 
+
         binding.btnReadCurrency.setOnClickListener {
-            tts.speak("Read Currency selected.", TextToSpeech.QUEUE_FLUSH, null, null)
-            showToast("Read Currency feature coming soon!")
+            tts.speak("Opening Currency Reader.", TextToSpeech.QUEUE_FLUSH, null, null)
+            startActivity(Intent(this, CurrencyReaderActivity::class.java))
         }
 
         binding.btnReadText.setOnClickListener {
