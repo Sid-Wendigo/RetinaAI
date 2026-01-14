@@ -31,11 +31,9 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private lateinit var tts: TextToSpeech
     private lateinit var gestureDetector: GestureDetector
 
-    // --- Used to avoid repeating the same text aloud ---
     private var lastSpokenText: String = ""
     private var lastAnalysisTimestamp: Long = 0
 
-    // 🔒 OCR session guard (prevents stale results)
     @Volatile
     private var ocrSessionId = 0
 
@@ -44,10 +42,8 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding = ActivityTextReaderBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize Text-to-Speech
         tts = TextToSpeech(this, this)
 
-        // --- Double tap: stop + invalidate old OCR ---
         gestureDetector = GestureDetector(
             this,
             object : GestureDetector.SimpleOnGestureListener() {
@@ -55,7 +51,12 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     tts.stop()
                     lastSpokenText = ""
                     lastAnalysisTimestamp = 0
-                    ocrSessionId++   // ❗ invalidate all old frames
+
+                    // ========= REQUIRED FIX START =========
+                    ocrSessionId++                    // invalidate pending OCR results
+                    lastSpokenText = "__RESET__"      // avoids old text being spoken again
+                    // ========= REQUIRED FIX END ==========
+
                     return true
                 }
             }
@@ -66,7 +67,6 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             true
         }
 
-        // Check and request permissions
         if (allPermissionsGranted()) {
             startCamera()
         } else {
@@ -77,13 +77,9 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             )
         }
 
-        // Executor for background image analysis
         cameraExecutor = Executors.newSingleThreadExecutor()
     }
 
-    /**
-     * Starts the camera and binds preview + text recognition analyzer.
-     */
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
@@ -115,10 +111,6 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }, ContextCompat.getMainExecutor(this))
     }
 
-    /**
-     * Analyzer class that continuously reads frames from the camera
-     * and performs on-device OCR using ML Kit’s Text Recognition API.
-     */
     private inner class TextRecognitionAnalyzer : ImageAnalysis.Analyzer {
 
         private val recognizer =
@@ -140,16 +132,13 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 imageProxy.imageInfo.rotationDegrees
             )
 
-            // Capture session at frame time
             val sessionAtCapture = ocrSessionId
 
             recognizer.process(image)
                 .addOnSuccessListener { visionText ->
 
-                    // ❌ Ignore stale OCR results
                     if (sessionAtCapture != ocrSessionId) return@addOnSuccessListener
 
-                    // 🔁 ORIGINAL LOGIC — UNCHANGED
                     val sortedBlocks =
                         visionText.textBlocks.sortedBy { it.boundingBox?.top }
 
@@ -181,9 +170,6 @@ class TextReaderActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    /**
-     * Initialize Text-to-Speech engine and set language.
-     */
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             val result = tts.setLanguage(Locale.US)

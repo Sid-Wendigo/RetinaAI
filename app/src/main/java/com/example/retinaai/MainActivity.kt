@@ -19,34 +19,16 @@ import androidx.core.content.ContextCompat
 import com.example.retinaai.databinding.ActivityMainBinding
 import java.util.Locale
 
-/**
- * MainActivity — Entry point of the Retina AI app.
- *
- * This activity:
- *  - Displays the live camera feed
- *  - Handles Text-To-Speech (TTS) feedback
- *  - Uses gestures (single tap / double tap) for navigation
- *  - Provides access to feature modules: Object Finder, Currency Reader, Text Reader, Obstacle Alert
- */
 class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
-    // View binding for accessing layout elements easily
     private lateinit var binding: ActivityMainBinding
-
-    // Text-to-Speech engine instance
     private lateinit var tts: TextToSpeech
-
-    // Gesture detector for handling tap gestures
     private lateinit var gestureDetector: GestureDetector
 
-    // Keeps track of which button is currently focused
     private var currentButtonIndex = -1
 
-    // List of feature buttons and their corresponding descriptions
     private lateinit var buttons: List<AppCompatButton>
     private lateinit var buttonDescriptions: List<String>
-
-    // Ensures welcome message is spoken only once
     private var isWelcomeMessageSpoken = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,23 +36,19 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize Text-To-Speech engine
         tts = TextToSpeech(this, this)
 
-        // Check and request camera permissions
         if (allPermissionsGranted()) {
             startCamera()
         } else {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
 
-        // Setup button references and interactions
         initializeButtons()
         setupInteraction()
         setupButtonClickListeners()
     }
 
-    /** Initializes the feature buttons and their spoken descriptions */
     private fun initializeButtons() {
         buttons = listOf(
             binding.btnFindObject,
@@ -86,22 +64,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         )
     }
 
-    /** Sets up gesture-based interaction: single tap to move focus, double tap to select */
     private fun setupInteraction() {
         val gestureListener = object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                cycleFocus() // Move focus to the next button
+                cycleFocus()
                 return true
             }
 
             override fun onDoubleTap(e: MotionEvent): Boolean {
-                selectCurrentButton() // Activate the currently focused button
+                selectCurrentButton()
                 return true
             }
         }
         gestureDetector = GestureDetector(this, gestureListener)
 
-        // Attach gesture detector to main layout
         binding.mainLayout.setOnTouchListener { view, event ->
             gestureDetector.onTouchEvent(event)
             if (event.action == MotionEvent.ACTION_DOWN) {
@@ -111,7 +87,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    /** Moves focus to the next button and speaks its description */
     private fun cycleFocus() {
         currentButtonIndex = (currentButtonIndex + 1) % buttons.size
         val description = buttonDescriptions[currentButtonIndex]
@@ -119,7 +94,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         updateButtonFocus()
     }
 
-    /** Visually updates which button is currently focused */
     private fun updateButtonFocus() {
         buttons.forEachIndexed { index, button ->
             if (index == currentButtonIndex) {
@@ -130,38 +104,38 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    /** Triggers the currently focused button’s click action */
     private fun selectCurrentButton() {
         if (currentButtonIndex != -1) {
             buttons[currentButtonIndex].performClick()
         }
     }
 
-    /** Assigns click listeners to all buttons with TTS feedback */
     private fun setupButtonClickListeners() {
         binding.btnFindObject.setOnClickListener {
-            tts.speak("Opening object detector", TextToSpeech.QUEUE_FLUSH, null, null)
+            binding.btnFindObject.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            tts.speak("Opening Object Detector.", TextToSpeech.QUEUE_FLUSH, null, null)
             startActivity(Intent(this, ObjectDetectorActivity::class.java))
         }
 
-
         binding.btnReadCurrency.setOnClickListener {
+            binding.btnReadCurrency.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
             tts.speak("Opening Currency Reader.", TextToSpeech.QUEUE_FLUSH, null, null)
             startActivity(Intent(this, CurrencyReaderActivity::class.java))
         }
 
         binding.btnReadText.setOnClickListener {
+            binding.btnReadText.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
             tts.speak("Opening Text Reader.", TextToSpeech.QUEUE_FLUSH, null, null)
             startActivity(Intent(this, TextReaderActivity::class.java))
         }
 
         binding.btnObstacleAlert.setOnClickListener {
-            tts.speak("Obstacle Alert selected.", TextToSpeech.QUEUE_FLUSH, null, null)
-            showToast("Obstacle Alert feature coming soon!")
+            binding.btnObstacleAlert.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            tts.speak("Obstacle Alert Active.", TextToSpeech.QUEUE_FLUSH, null, null)
+            startActivity(Intent(this, ObstacleDetectorActivity::class.java))
         }
     }
 
-    /** Starts the camera preview using CameraX */
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -179,7 +153,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }, ContextCompat.getMainExecutor(this))
     }
 
-    /** Handles TTS engine initialization and plays a welcome message once ready */
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             val result = tts.setLanguage(Locale.US)
@@ -197,12 +170,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    /** Checks if all required permissions (like camera) are granted */
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
-    /** Handles permission request results */
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
@@ -215,14 +186,21 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    /** Cleans up TTS resources when activity is destroyed */
+    // ====== FIX FOR CAMERA OVERLAY DISAPPEARING ======
+    override fun onResume() {
+        super.onResume()
+        if (allPermissionsGranted()) {
+            startCamera()
+        }
+    }
+    // =================================================
+
     override fun onDestroy() {
         super.onDestroy()
         tts.stop()
         tts.shutdown()
     }
 
-    /** Displays short toast messages */
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
@@ -230,6 +208,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     companion object {
         private const val TAG = "RetinaMain"
         private const val REQUEST_CODE_PERMISSIONS = 10
-        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.VIBRATE)
     }
 }
